@@ -1,0 +1,146 @@
+# JWT Fields Documentation
+
+## Overview
+This document describes all JWT payload fields used in [SUPABASE], including their types, requirements, and usage.
+
+## Standard JWT Claims
+
+### `iat` (Issued At)
+- **Type**: `number` (Unix timestamp)
+- **Required**: Yes
+- **Description**: Timestamp when the JWT was issued
+- **Example**: `1653404400`
+
+### `exp` (Expiration Time)
+- **Type**: `number` (Unix timestamp)
+- **Required**: Yes
+- **Description**: Timestamp when the JWT expires
+- **Example**: `1653408000`
+
+### `iss` (Issuer)
+- **Type**: `string`
+- **Required**: No
+- **Description**: Identifies the principal that issued the JWT
+- **Example**: `"api.example.com"`
+
+## Custom Application Claims
+
+### `id` (User ID)
+- **Type**: `string` | `number`
+- **Required**: Yes
+- **Description**: Unique identifier for the authenticated user
+- **Example**: `"507f1f77bcf86cd799439011"` or `12345`
+
+### `email`
+- **Type**: `string`
+- **Required**: Yes
+- **Description**: User's email address
+- **Example**: `"user@example.com"`
+
+### `role`
+- **Type**: `string`
+- **Required**: No
+- **Description**: User's role or permission level
+- **Possible Values**: `"admin"`, `"user"`, `"moderator"`
+- **Default**: `"user"`
+
+### `permissions`
+- **Type**: `string[]`
+- **Required**: No
+- **Description**: Array of specific permissions
+- **Example**: `["read:posts", "write:posts", "delete:comments"]`
+
+### `ref` ⚠️
+- **Type**: `string`
+- **Required**: No
+- **Description**: Reference field for [specific purpose]
+- **Example**: `"abc123"`
+- **Note**: This is a reserved keyword in Rust. Consider using `reference` or `ref_id` in your implementation.
+
+## Language-Specific Considerations
+
+### Rust Implementation
+```rust
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct JwtClaims {
+    pub id: String,
+    pub email: String,
+    pub role: Option<String>,
+    pub permissions: Option<Vec<String>>,
+    #[serde(rename = "ref")]  // Handle reserved keyword
+    pub reference: Option<String>,
+    pub iat: u64,
+    pub exp: u64,
+}
+```
+
+### JavaScript/TypeScript Implementation
+```typescript
+interface JwtPayload {
+  id: string;
+  email: string;
+  role?: string;
+  permissions?: string[];
+  ref?: string;
+  iat: number;
+  exp: number;
+}
+```
+
+## Example JWT Payload
+```json
+{
+  "id": "507f1f77bcf86cd799439011",
+  "email": "user@example.com",
+  "role": "user",
+  "permissions": ["read:posts"],
+  "ref": "abc123",
+  "iat": 1653404400,
+  "exp": 1653408000
+}
+```
+
+## Validation Rules
+
+### Required Fields Validation
+All JWT tokens must contain:
+- `id`
+- `email`
+- `iat`
+- `exp`
+
+### Optional Fields
+The following fields may be omitted or null:
+- `role` (defaults to "user")
+- `permissions` (defaults to empty array)
+- `ref`
+
+## Security Considerations
+
+### Field Sensitivity
+- **Public**: `iat`, `exp`, `role`
+- **Semi-sensitive**: `id`, `ref`
+- **Sensitive**: `email`, `permissions`
+
+### Field Validation
+- `email` must be a valid email format
+- `exp` must be greater than `iat`
+- `role` must be one of the allowed values
+- `permissions` must be from the valid permissions list
+
+## Migration Guide
+
+If updating JWT structure:
+1. Ensure backward compatibility
+2. Update all JWT creation points
+3. Update validation middleware
+4. Test with existing tokens
+5. Update client-side JWT handling
+
+## Related Files
+- `src/auth/jwt.js` - JWT creation and validation
+- `src/middleware/auth.js` - JWT verification middleware
+- `src/types/jwt.ts` - TypeScript type definitions
+- `tests/auth.test.js` - JWT testing suite
