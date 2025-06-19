@@ -20,7 +20,6 @@ Install the `@supabase/supabase-js` package and the helper `@supabase/ssr` packa
 ```sh
 npm install @supabase/supabase-js @supabase/ssr
 ```
-
 </StepHikeCompact.Code>
 
 </StepHikeCompact.Step>
@@ -76,7 +75,7 @@ import { sequence } from '@sveltejs/kit/hooks'
 
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public'
 
-const supabase: Handle = async ({ event, resolve }) => {
+const supabasehandle: Handle = async ({ event, resolve }) => {
   /**
    * Creates a Supabase client specific to this server request.
    *
@@ -134,7 +133,7 @@ const supabase: Handle = async ({ event, resolve }) => {
   })
 }
 
-const authGuard: Handle = async ({ event, resolve }) => {
+const authGuardhandle: Handle = async ({ event, resolve }) => {
   const { session, user } = await event.locals.safeGetSession()
   event.locals.session = session
   event.locals.user = user
@@ -172,27 +171,49 @@ To prevent TypeScript errors, add type definitions for the new `event.locals` pr
 <$CodeTabs>
 
 ```ts name=src/app.d.ts
-import type { Session, SupabaseClient, User } from '@supabase/supabase-js'
-import type { Database } from './database.types.ts' // import generated types
+
+import type { Session, SupabaseClient, User } from '@supabase/supabase-js';
+import type { Database } from './database.types.ts';
+
+// Extend SvelteKit's App namespace for type safety
 
 declare global {
   namespace App {
-    // interface Error {}
+
+    // Custom error handling (uncomment to use)
+    // interface Error {
+
+    // Define types for server-side locals
     interface Locals {
-      supabase: SupabaseClient<Database>
-      safeGetSession: () => Promise<{ session: Session | null; user: User | null }>
-      session: Session | null
-      user: User | null
+
+      // Supabase client with database schema
+      supabase: SupabaseClient<Database>;
+
+      // Function to safely retrieve session and user with JWT validation
+      safeGetSession: () => Promise<{ session: Session | null; user: User | null }>;
+
+      // Current session, null if unauthenticated
+      session: Session | null;
+
+      // Current user, null if unauthenticated
+      user: User | null;
     }
+
+    // Define types for page data passed to Svelte components
     interface PageData {
-      session: Session | null
+      // Session data for page rendering
+      session: Session | null;
     }
+
+    // Additional SvelteKit interfaces (uncomment to use)
     // interface PageState {}
     // interface Platform {}
   }
 }
 
-export {}
+// Required for TypeScript module augmentation
+
+export {};
 ```
 
 </$CodeTabs>
@@ -334,12 +355,26 @@ To populate your database, run the [colors quickstart](/dashboard/project/_/sql/
 <$CodeTabs>
 
 ```ts name=src/routes/+page.server.ts
-import type { PageServerLoad } from './$types'
 
+import type { PageServerLoad } from './$types';
+
+// Fetch color names from the public colors table
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
-  const { data: colors } = await supabase.from('colors').select('name').limit(5).order('name')
-  return { colors: colors ?? [] }
-}
+  // Query up to 5 colors, ordered by name
+  const { data: colors, error } = await supabase
+    .from('colors')
+    .select('name')
+    .limit(5)
+    .order('name');
+
+  if (error) {
+    console.warn('Failed to fetch colors:', error.message);
+    return { colors: [] };
+  }
+
+  return { colors: colors ?? [] };
+};
+
 ```
 
 ```svelte name=src/routes/+page.svelte
